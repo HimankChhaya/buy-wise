@@ -7,6 +7,10 @@ import { isAmazonProductPage, extractASIN, extractProductImage } from "./amazon"
 import { extractOffers } from "./offers";
 import { BuyWiseData } from "../types";
 import "./styles.css";
+import Panel from "./Panel";
+import { openOffersPanel } from "./offerPanel";
+import "./panel.css";
+import { pickFakeData, PanelData } from "./fakeData";
 
 let currentRoot: Root | null = null;
 let currentContainer: HTMLDivElement | null = null;
@@ -31,6 +35,35 @@ function createContainer(): HTMLDivElement {
   container.id = "buywise-root";
   document.body.appendChild(container);
   return container;
+}
+
+function mountFakePanel(data: PanelData): boolean {
+  if (!isAmazonProductPage()) return false;
+  removeExistingUI();
+  document.getElementById("buywise-root")?.remove();
+
+  currentContainer = document.createElement("div");
+  currentContainer.id = "buywise-root";
+
+  currentContainer.classList.add("bw-floating");
+  document.body.appendChild(currentContainer);
+
+  currentRoot = createRoot(currentContainer);
+  currentRoot.render(
+    <Panel
+      data={data}
+      markUrl={chrome.runtime.getURL("mark.png")}
+      onClose={removeExistingUI}
+      onSeeOffers={() => openOffersPanel()}
+    />
+  );
+  return true;
+}
+
+async function showPanel(): Promise<boolean> {
+  const fake = pickFakeData(window.location.href);
+  if (fake) return mountFakePanel(fake);
+  return mountFloatingPanel();
 }
 
 async function fetchBuyWiseData(asin: string): Promise<BuyWiseData> {
@@ -178,13 +211,13 @@ function followVariantChanges(): void {
 function init(): void {
   console.log("BuyWise content script loaded");
   if (!isAmazonProductPage()) return;
-  window.setTimeout(() => { mountFloatingPanel(); }, 500);
+  window.setTimeout(() => { showPanel(); }, 500);
   followVariantChanges();
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "BUYWISE_OPEN_PANEL") {
-    mountFloatingPanel().then((opened) => sendResponse({ opened }));
+    showPanel().then((opened) => sendResponse({ opened }));
     return true;
   }
   if (message?.type === "BUYWISE_CLOSE_PANEL") {
