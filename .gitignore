@@ -28,6 +28,8 @@ studies/review_counts.csv
 studies/reviews_pulled.*
 studies/sentiment_scores.csv
 
+# Track record output (backend/scripts/track_record.py)
+backend/track_record_out/
 
 # Ignore local data snapshots and experiment logs
 studies/snapshots/
